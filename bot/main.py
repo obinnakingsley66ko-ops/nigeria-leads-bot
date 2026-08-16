@@ -1,4 +1,4 @@
-"""Nigeria B2B Lead Gen — application entrypoint.
+"""Nigeria B2B Lead Gen \u2014 application entrypoint.
 
 This module is now a THIN factory: all command logic lives in `bot/commands/`
 (one file per concern). It only wires logging, the command registry, the
@@ -19,7 +19,7 @@ from telegram.ext import (
     CallbackQueryHandler, filters,
 )
 
-from . import config, db
+from . import config, db, health
 from .commands import COMMANDS, on_button, on_error, on_text, on_unknown_command
 from .commands.common import build_command_list
 
@@ -99,6 +99,10 @@ def main() -> None:
     logger.info("Nigeria B2B Lead Gen bot booting.")
     logger.info("Data sources: OpenStreetMap (primary) + optional Google/Bing Places.")
     logger.info("Storage: %s", config.DB_PATH)
+
+    # Start the health-check HTTP server (no-op-safe) so Render's free web
+    # service sees a healthy endpoint while the bot long-polls.
+    health.start()
 
     if config.WEBHOOK_URL:
         _run_webhook(app)

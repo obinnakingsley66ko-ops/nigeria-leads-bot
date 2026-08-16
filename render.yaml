@@ -1,8 +1,9 @@
 services:
-  - type: worker
+  - type: web
     name: nigeria-leads-bot
     runtime: docker
     plan: free
+    healthCheckPath: /healthz
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
@@ -11,4 +12,4 @@ services:
       - key: WEBHOOK_URL
         value: ""
       - key: PORT
-        value: "8000"
+        value: "10000"
