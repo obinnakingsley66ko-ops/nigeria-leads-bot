@@ -1,0 +1,23 @@
+# Secrets — never commit real credentials
+.env
+*.env
+.env.*
+
+# Local data / SQLite
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db

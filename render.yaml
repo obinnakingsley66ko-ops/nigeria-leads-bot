@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nigeria-leads-bot
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OWNER_ID
+        value: "7812262525"
+      - key: WEBHOOK_URL
+        value: ""   # long-polling; set to your render URL to use webhook
+      - key: PORT
+        value: "8000"
