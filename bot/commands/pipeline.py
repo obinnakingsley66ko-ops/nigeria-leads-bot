@@ -15,18 +15,18 @@ STAGE_ORDER = [
 async def cmd_pipeline(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     counts = db.pipeline_counts()
     total = sum(r["n"] for r in counts)
-    lines = [f"📊 <b>Pipeline</b> — {total} leads", ""]
+    lines = [f"\ud83d\udcca <b>Pipeline</b> — {total} leads", ""]
     for stage in STAGE_ORDER:
         n = next((r["n"] for r in counts if r["stage"] == stage), 0)
-        bar = "▰" * min(10, n) + "▱" * (10 - min(10, n))
+        bar = "\u25b0" * min(10, n) + "\u25b1" * (10 - min(10, n))
         lines.append(f"{esc(stage):<16} {bar} {n}")
     lines += ["", c("/leads") + " recent · " + c("/stage <id> <stage>") + " to move"]
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 async def cmd_stages(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "📋 <b>Stages</b>: " + " → ".join(esc(s) for s in STAGE_ORDER),
+        "\ud83d\udccb <b>Stages</b>: " + " → ".join(esc(s) for s in STAGE_ORDER),
         parse_mode=ParseMode.HTML)
 
 
@@ -51,12 +51,12 @@ async def cmd_stage(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         return
     lead = db.get_lead(lead_id)
     if not lead:
-        await update.message.reply_text(f"⚠️ Lead {lead_id} not found.",
+        await update.message.reply_text(f"\u26a0\ufe0f Lead {lead_id} not found.",
                                         parse_mode=ParseMode.HTML)
         return
     db.update_pipeline(lead_id, match, note=f"moved by {update.effective_user.id}")
     await update.message.reply_text(
-        f"✅ Lead {lead_id} ({esc(lead['company'])}) → {esc(match)}",
+        f"\u2705 Lead {lead_id} ({esc(lead['company'])}) → {esc(match)}",
         parse_mode=ParseMode.HTML)
 
 

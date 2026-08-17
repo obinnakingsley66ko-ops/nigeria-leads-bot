@@ -116,24 +116,24 @@ async def run_export(update: Update, ctx: ContextTypes.DEFAULT_TYPE,
     fmt = (fmt or "").lower()
     doc = _export_doc(fmt)
     if not doc:
-        await update.message.reply_text("Unknown export format.", parse_mode=ParseMode.HTML)
+        await update.effective_message.reply_text("Unknown export format.", parse_mode=ParseMode.HTML)
         return
     name, data = doc
     total = db.get_stats()["total"]
     if not data or not data.strip():
-        await update.message.reply_text("No leads to export yet.",
+        await update.effective_message.reply_text("No leads to export yet.",
                                         parse_mode=ParseMode.HTML)
         return
-    await update.message.reply_document(
+    await update.effective_message.reply_document(
         document=io.BytesIO(data), filename=name,
-        caption=f"✅ {total} leads exported ({fmt.upper()})")
+        caption=f"\u2705 {total} leads exported ({fmt.upper()})")
 
 
 async def cmd_export(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     text = (update.message.text or "").replace("/export", "", 1).strip().lower()
     from .common import EXPORT_KB
     if not text:
-        await update.message.reply_text("📤 <b>Export format</b>:",
+        await update.message.reply_text("\ud83d\udce4 <b>Export format</b>:",
                                         parse_mode=ParseMode.HTML,
                                         reply_markup=EXPORT_KB)
         return

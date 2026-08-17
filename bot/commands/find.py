@@ -28,7 +28,7 @@ async def _run_collection(update, sent, industry, bbox, limit, campaign_id=None)
 
     async def progress(msg, **kw):
         now = time.time()
-        if now - last_edit[0] < 1.5 and not msg.startswith(("✅", "❌")):
+        if now - last_edit[0] < 1.5 and not msg.startswith(("\u2705", "\u274c")):
             return
         last_edit[0] = now
         try:
@@ -44,7 +44,7 @@ async def _run_collection(update, sent, industry, bbox, limit, campaign_id=None)
     except Exception as e:  # noqa: BLE001
         logger.exception("collection failed for industry=%s", industry)
         try:
-            await sent.edit_text(f"❌ Search failed: {esc(e)}",
+            await sent.edit_text(f"\u274c Search failed: {esc(e)}",
                                  parse_mode=ParseMode.HTML)
         except TelegramError:
             pass
@@ -58,38 +58,42 @@ async def cmd_find(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not industry:
         await update.message.reply_text(
-            "⚠️ Unknown industry. Try " + c("/find construction Lagos") +
+            "\u26a0\ufe0f Unknown industry. Try " + c("/find construction Lagos") +
             "\nSee " + c("/packs") + " for supported industries.",
             parse_mode=ParseMode.HTML)
         return
     if not city:
         await update.message.reply_text(
-            "⚠️ Please specify a city, e.g. " + c("/find construction Lagos") +
+            "\u26a0\ufe0f Please specify a city, e.g. " + c("/find construction Lagos") +
             "\nSupported: Lagos, Abuja, Port Harcourt, Benin City, Kano, "
-            "Ibadan, Enugu, Aba, Onitsha, Warri, Uyo, Calabar, Kaduna, Jos…",
+            "Ibadan, Enugu, Aba, Onitsha, Warri, Uyo, Calabar, Kaduna, Jos\u2026",
             parse_mode=ParseMode.HTML)
         return
 
     city_name, bbox = nigeria.resolve_city(city)
     if not bbox:
-        await update.message.reply_text(f"⚠️ Unknown city: {esc(city)}",
+        await update.message.reply_text(f"\u26a0\ufe0f Unknown city: {esc(city)}",
                                         parse_mode=ParseMode.HTML)
         return
 
     limit = 30
     label = nigeria.INDUSTRIES.get(industry, {}).get("label", industry)
     sent = await update.message.reply_text(
-        f"🔎 Searching <b>{esc(label)}</b> in <b>{esc(city_name)}</b>… "
+        f"\ud83d\udd0e Searching <b>{esc(label)}</b> in <b>{esc(city_name)}</b>\u2026 "
         f"(real data, ~{limit} leads)", parse_mode=ParseMode.HTML)
 
     summary = await _run_collection(update, sent, industry, bbox, limit)
     if summary is None:
         return
+    if summary.get("error"):
+        await sent.edit_text("\u26a0\ufe0f " + summary["error"],
+                             parse_mode=ParseMode.HTML)
+        return
 
     leads = db.get_leads(limit=limit, industry=industry)
     top = leads[:6]
     lines = [
-        f"✅ <b>Done — {summary['added']} leads</b> "
+        f"\u2705 <b>Done — {summary['added']} leads</b> "
         f"(qualified: {summary['qualified']}, verified emails: {summary['verified']})",
         "", fmt_leads(top, "Top results"),
         "",
@@ -103,12 +107,12 @@ async def cmd_search(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     text = (update.message.text or "").replace("/search", "", 1).strip()
     industry = nigeria.resolve_industry(text)
     if not industry:
-        await update.message.reply_text("⚠️ Unknown industry.",
+        await update.message.reply_text("\u26a0\ufe0f Unknown industry.",
                                         parse_mode=ParseMode.HTML)
         return
 
     sent = await update.message.reply_text(
-        f"🔎 Searching <b>{esc(industry)}</b> across Nigeria (top cities)…",
+        f"\ud83d\udd0e Searching <b>{esc(industry)}</b> across Nigeria (top cities)\u2026",
         parse_mode=ParseMode.HTML)
 
     async def progress(msg, **kw):
@@ -128,5 +132,5 @@ async def cmd_search(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             continue
 
     await sent.edit_text(
-        f"✅ Collected <b>{total}</b> leads for <b>{esc(industry)}</b> across Nigeria.\n"
+        f"\u2705 Collected <b>{total}</b> leads for <b>{esc(industry)}</b> across Nigeria.\n"
         + c("/export csv") + " to download.", parse_mode=ParseMode.HTML)

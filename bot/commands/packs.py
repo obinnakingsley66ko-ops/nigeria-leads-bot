@@ -61,7 +61,7 @@ async def _run_pack(update, sent, name, industry, city_key, limit=40):
                 continue
 
     await sent.edit_text(
-        f"✅ <b>{esc(name)}</b>: {total} new leads collected.\n"
+        f"\u2705 <b>{esc(name)}</b>: {total} new leads collected.\n"
         f"{c('/export csv')} to download · {c('/pipeline')} to manage.",
         parse_mode=ParseMode.HTML)
 
@@ -73,8 +73,8 @@ async def cmd_packs(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         for name in PACKS
     ])
     ctx.user_data["packs"] = PACKS
-    await update.message.reply_text(
-        "📦 <b>Prospect packs</b> — pick one:", parse_mode=ParseMode.HTML,
+    await update.effective_message.reply_text(
+        "\ud83d\udce6 <b>Prospect packs</b> — pick one:", parse_mode=ParseMode.HTML,
         reply_markup=kb)
 
 
@@ -86,5 +86,5 @@ async def run_pack_callback(update, ctx, name: str) -> None:
     industry, city_key = packs[name]
     await update.callback_query.answer()
     sent = await update.callback_query.edit_message_text(
-        f"🔎 Running <b>{esc(name)}</b>…", parse_mode=ParseMode.HTML)
+        f"\ud83d\udd0e Running <b>{esc(name)}</b>\u2026", parse_mode=ParseMode.HTML)
     await _run_pack(update, sent, name, industry, city_key)

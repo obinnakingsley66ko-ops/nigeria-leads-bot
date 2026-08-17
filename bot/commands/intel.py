@@ -18,7 +18,7 @@ EMAIL_TEMPLATE = (
 )
 
 CALL_TEMPLATE = (
-    "📞 <b>Call script</b>\n"
+    "\ud83d\udcde <b>Call script</b>\n"
     "1. Intro: \"Hi {name}, this is {you}. I help {industry} businesses in "
     "{city} grow.\"\n"
     "2. Hook: \"I saw {company}'s work and have one idea for {city}.\"\n"
@@ -36,21 +36,21 @@ def _offer(uid) -> dict:
 async def cmd_intel(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     text = (update.message.text or "").replace("/intel", "", 1).strip()
     if not text or not text.isdigit():
-        await update.message.reply_text("Usage: " + c("/intel <lead_id>"),
+        await update.effective_message.reply_text("Usage: " + c("/intel <lead_id>"),
                                         parse_mode=ParseMode.HTML)
         return
     lead = db.get_lead(int(text))
     if not lead:
-        await update.message.reply_text(f"⚠️ Lead {text} not found.",
+        await update.effective_message.reply_text(f"\u26a0\ufe0f Lead {text} not found.",
                                         parse_mode=ParseMode.HTML)
         return
     site = a(lead["website"], "website") if lead["website"] else "no website"
     lines = [
-        f"🧠 <b>Intel: {esc(lead['company'])}</b> {c(lead['id'])}",
-        f"🏭 {esc(lead['industry'] or '—')} · 📍 {esc(lead['city'] or '—')}",
-        f"🌐 {site} · ⭐ {lead['score']} pts · {esc(lead['pipeline_stage'] or 'New')}",
-        f"📧 {esc(lead['email'] or '—')} ({esc(lead['email_status'] or 'unknown')})",
-        f"📞 {esc(lead['phone'] or '—')}",
+        f"\ud83e\udde0 <b>Intel: {esc(lead['company'])}</b> {c(lead['id'])}",
+        f"\ud83c\udfed {esc(lead['industry'] or '—')} · \ud83d\udccd {esc(lead['city'] or '—')}",
+        f"\ud83c\udf10 {site} · \u2b50 {lead['score']} pts · {esc(lead['pipeline_stage'] or 'New')}",
+        f"\ud83d\udce7 {esc(lead['email'] or '—')} ({esc(lead['email_status'] or 'unknown')})",
+        f"\ud83d\udcde {esc(lead['phone'] or '—')}",
         "",
         "<b>Outreach assets</b>",
     ]
@@ -62,8 +62,8 @@ async def cmd_intel(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             subject=f"Quick idea for {lead['company']}",
             name=name, company=lead["company"], industry=lead["industry"] or "your sector",
             you=you, phone=offer.get("phone") or "")
-        lines.append(f"✉️ <b>Cold email</b>\n<code>{esc(email)}</code>")
+        lines.append(f"\u2709\ufe0f <b>Cold email</b>\n<code>{esc(email)}</code>")
     lines.append(CALL_TEMPLATE.format(
         name=name, you=you, industry=lead["industry"] or "your sector",
         city=lead["city"] or "your city", company=lead["company"]))
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)

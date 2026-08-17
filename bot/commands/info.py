@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 from .common import MENU_KB, build_command_list, c, esc
 
 WELCOME = (
-    "👋 <b>Nigeria Leads Bot</b> — your B2B prospecting engine.\n\n"
+    "\ud83d\udc4b <b>Nigeria Leads Bot</b> — your B2B prospecting engine.\n\n"
     "I find, enrich and qualify real Nigerian businesses from public sources "
     "(OpenStreetMap + optional Google/Bing Places), organise them in a CRM "
     "pipeline, and export to CSV, Excel, JSON or your CRM.\n\n"
@@ -27,7 +27,7 @@ async def cmd_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    lines = ["<b>📖 Commands</b>", ""]
+    lines = ["<b>\ud83d\udcd6 Commands</b>", ""]
     for cmd, desc in build_command_list():
         lines.append(f"{c('/' + cmd)} — {esc(desc)}")
     lines += [
@@ -37,4 +37,4 @@ async def cmd_help(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "Tip: <b>Intel</b> needs a lead id, e.g. /intel 12.",
         "Tip: <b>Stage</b> moves a lead, e.g. /stage 12 Won.",
     ]
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)

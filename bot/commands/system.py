@@ -54,12 +54,12 @@ async def cmd_owner(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     uid = update.effective_user.id
     current = db.get_owner()
     if current and current != uid:
-        await update.message.reply_text("⛔ This bot already has an owner.",
+        await update.message.reply_text("\u26d4 This bot already has an owner.",
                                         parse_mode=ParseMode.HTML)
         return
     db.set_owner(uid)
     await update.message.reply_text(
-        f"✅ You are now the owner (ID {uid}).", parse_mode=ParseMode.HTML)
+        f"\u2705 You are now the owner (ID {uid}).", parse_mode=ParseMode.HTML)
 
 
 async def cmd_migrate(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -74,7 +74,7 @@ async def cmd_migrate(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     old, new = int(parts[0]), int(parts[1])
     db.migrate_owner(old, new)
     await update.message.reply_text(
-        f"✅ Owner migrated from {old} to {new}.", parse_mode=ParseMode.HTML)
+        f"\u2705 Owner migrated from {old} to {new}.", parse_mode=ParseMode.HTML)
 
 
 async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -91,7 +91,7 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if config.BING_PLACES_API_KEY:
         sources += " + Bing Places"
     lines = [
-        "📡 <b>Bot status</b>",
+        "\ud83d\udce1 <b>Bot status</b>",
         f"Owner: {owner or 'unset'}",
         f"Uptime: {h}h {m}m {s}s",
         f"Data sources: {esc(sources)}",
@@ -99,14 +99,14 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         f"Leads: {stats['total']} · qualified {stats['qualified']} · "
         f"verified emails {stats['verified']}",
     ]
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 async def cmd_stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not require_owner(update):
         return
     stats = db.get_stats()
-    lines = [f"📊 <b>Database stats</b> — {stats['total']} leads",
+    lines = [f"\ud83d\udcca <b>Database stats</b> — {stats['total']} leads",
              f"Qualified: {stats['qualified']} · Verified emails: {stats['verified']}",
              "", "<b>By industry</b>"]
     for row in stats["by_industry"][:10]:
@@ -136,5 +136,5 @@ async def cmd_offer(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     _set_offer(update.effective_user.id, offer)
     _save_offer_db(update.effective_user.id, offer)
     await update.message.reply_text(
-        f"✅ Introduction saved for outreach assets (Hi, I'm {esc(you)} from {esc(company)}).",
+        f"\u2705 Introduction saved for outreach assets (Hi, I'm {esc(you)} from {esc(company)}).",
         parse_mode=ParseMode.HTML)

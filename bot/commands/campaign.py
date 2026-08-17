@@ -32,7 +32,7 @@ async def cmd_campaign(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not industry:
         await update.message.reply_text(
-            f"⚠️ Unknown industry: {esc(parts[1])}", parse_mode=ParseMode.HTML)
+            f"\u26a0\ufe0f Unknown industry: {esc(parts[1])}", parse_mode=ParseMode.HTML)
         return
 
     camp_id = uuid.uuid4().hex[:12]
@@ -40,8 +40,8 @@ async def cmd_campaign(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
                        update.effective_user.id)
     limit = 60
     sent = await update.message.reply_text(
-        f"🎯 Campaign <b>{esc(name)}</b> started — collecting "
-        f"<b>{esc(industry)}</b> in <b>{esc(city_name or 'Nigeria')}</b>…",
+        f"\ud83c\udfaf Campaign <b>{esc(name)}</b> started — collecting "
+        f"<b>{esc(industry)}</b> in <b>{esc(city_name or 'Nigeria')}</b>\u2026",
         parse_mode=ParseMode.HTML)
 
     async def progress(msg, **kw):
@@ -68,7 +68,7 @@ async def cmd_campaign(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
             logger.exception("campaign city failed: %s", cname)
 
     db.finish_campaign(camp_id)
-    msg = (f"✅ Campaign <b>{esc(name)}</b> complete — {total} leads added"
+    msg = (f"\u2705 Campaign <b>{esc(name)}</b> complete — {total} leads added"
            + (f" ({errors} city errors)" if errors else "") + ".\n"
            + c("/export csv") + " to download · " + c("/pipeline") + " to manage.")
     await sent.edit_text(msg, parse_mode=ParseMode.HTML)
@@ -80,9 +80,9 @@ async def cmd_campaigns(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("No campaigns yet. Use " + c("/campaign"),
                                         parse_mode=ParseMode.HTML)
         return
-    lines = ["<b>🎯 Campaigns</b>", ""]
+    lines = ["<b>\ud83c\udfaf Campaigns</b>", ""]
     for camp in camps:
         lines.append(
             f"• <b>{esc(camp['name'])}</b> — {esc(camp['industry'])} @ "
             f"{esc(camp['location'])} ({camp['total']} leads, {esc(camp['status'])})")
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)

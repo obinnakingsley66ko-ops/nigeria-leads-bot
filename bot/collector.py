@@ -9,6 +9,7 @@ command handlers, with progress reported through an optional async callback.
 import json
 import logging
 import re
+import time
 import urllib.parse
 import urllib.request
 
@@ -16,7 +17,16 @@ from . import config, db, nigeria
 
 logger = logging.getLogger("nigeria-leads-bot")
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Multiple Overpass mirrors — the primary endpoint is rate-limited and can
+# return 429/504 under load, so we fail over automatically.
+OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass.nchc.org.tw/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
+
 UA = "Nigeria-Leads-Bot/1.0 (+https://github.com/obinnakingsley66ko-ops)"
 
 _SCORE_RULES = [
@@ -50,8 +60,6 @@ def _email_status(email: str) -> str:
     try:
         import socket
         socket.getaddrinfo(domain, None)
-        import smtplib
-        smtplib.SMTP  # noqa: B018
     except Exception:  # noqa: BLE001
         return "unknown"
     return "valid"
@@ -59,28 +67,59 @@ def _email_status(email: str) -> str:
 
 def _overpass_query(tag: dict, bbox, limit: int) -> str:
     s, w, n, e = bbox
-    parts = []
-    for k, v in tag.items():
-        parts.append(f'node["{k}"="{v}"]({s},{w},{n},{e});')
-    query = "(" + "".join(parts) + ");"
+    # A tag spec is a single OSM key=value pair: {"k": "office", "v": "..."}.
+    # Build one node filter `node["office"="..."]`. (Previously the code
+    # iterated tag.items(), which produced node["k"="office"] + node["v"="..."]
+    # — searching for OSM keys literally named "k"/"v", so every query matched
+    # nothing and returned 0 leads.)
+    k, v = tag.get("k"), tag.get("v")
+    parts = [f'node["{k}"="{v}"]({s},{w},{n},{e});']
+    # [out:json] is REQUIRED — without it Overpass returns XML and json.loads
+    # fails ("Expecting value"). [timeout:25] caps server-side execution so a
+    # slow mirror doesn't hang the whole collection.
+    query = f"[out:json][timeout:25];(" + "".join(parts) + ");"
     query += f"out body {min(limit, 50)};"
     return query
 
 
-def _query_osm(tags: list[dict], bbox, limit: int) -> list[dict]:
-    """Run one Overpass query per tag set and merge results."""
+def _post_overpass(url: str, data: bytes) -> dict:
+    req = urllib.request.Request(
+        url, data=data,
+        headers={"User-Agent": UA,
+                 "Content-Type": "application/x-www-form-urlencoded"},
+    )
+    with urllib.request.urlopen(req, timeout=40) as resp:
+        raw = resp.read().decode() or "{}"
+    return json.loads(raw)
+
+
+def _query_osm(tags: list[dict], bbox, limit: int):
+    """Run one Overpass query per tag set, merging results across mirrors.
+
+    Returns (results, all_failed) where all_failed is True only if every
+    tag query failed on every mirror (i.e. the data source is unreachable).
+    """
     seen, out = set(), []
+    failed_tags = 0
     for tag in tags:
-        data = urllib.parse.urlencode({"data": _overpass_query(tag, bbox, limit)})
-        req = urllib.request.Request(
-            OVERPASS_URL, data=data.encode(),
-            headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"},
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=40) as resp:
-                payload = json.loads(resp.read().decode() or "{}")
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Overpass query failed for %s: %s", tag, e)
+        data = urllib.parse.urlencode(
+            {"data": _overpass_query(tag, bbox, limit)}).encode()
+        payload = None
+        last_err = None
+        for base in OVERPASS_MIRRORS:
+            for attempt in range(2):
+                try:
+                    payload = _post_overpass(base, data)
+                    break
+                except Exception as e:  # noqa: BLE001
+                    last_err = e
+                    time.sleep(1.0 * (attempt + 1))
+            if payload is not None:
+                break
+        if payload is None:
+            failed_tags += 1
+            logger.warning("Overpass query failed for %s (all mirrors): %s",
+                           tag, last_err)
             continue
         for el in payload.get("elements", []):
             if el.get("type") != "node":
@@ -99,7 +138,7 @@ def _query_osm(tags: list[dict], bbox, limit: int) -> list[dict]:
                 "lat": el.get("lat"),
                 "lon": el.get("lon"),
             })
-    return out
+    return out, (failed_tags == len(tags))
 
 
 def _normalise_url(url: str | None) -> str:
@@ -143,7 +182,9 @@ def collect(industry: str, bbox, limit: int, campaign_id: str | None = None,
             progress=None) -> dict:
     """Collect leads for one industry in one bbox.
 
-    `progress` is an optional async callback(msg).
+    `progress` is an optional async callback(msg). Never raises for transient
+    network/source failures — it reports them and returns a summary dict that
+    may carry an "error" key.
     """
     spec = nigeria.INDUSTRIES.get(industry)
     if not spec:
@@ -160,8 +201,15 @@ def collect(industry: str, bbox, limit: int, campaign_id: str | None = None,
         except Exception:  # noqa: BLE001
             pass
 
-    _sync_report(f"🔎 Querying {spec['label']} in {city_name or 'Nigeria'}…")
-    raw = _query_osm(spec["tags"], bbox, limit)
+    _sync_report(f"\U0001f50e Querying {spec['label']} in {city_name or 'Nigeria'}\u2026")
+    raw, source_error = _query_osm(spec["tags"], bbox, limit)
+
+    if source_error and not raw:
+        _sync_report("\u26a0\ufe0f OpenStreetMap is unreachable right now.")
+        return {
+            "added": 0, "qualified": 0, "verified": 0,
+            "error": "OpenStreetMap is temporarily unreachable \u2014 please try again in a minute.",
+        }
 
     added = qualified = verified = 0
     for item in raw:
@@ -198,5 +246,5 @@ def collect(industry: str, bbox, limit: int, campaign_id: str | None = None,
         if is_new:
             added += 1
 
-    _sync_report(f"✅ {spec['label']} in {city_name or 'Nigeria'}: {added} leads")
+    _sync_report(f"\u2705 {spec['label']} in {city_name or 'Nigeria'}: {added} leads")
     return {"added": added, "qualified": qualified, "verified": verified}
